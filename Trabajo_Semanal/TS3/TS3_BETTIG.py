@@ -55,6 +55,48 @@ def noise_gen(snr, N):
     var = np.power(10.0,snr/(-10.0));
     return rnd_nmbrs_gen(var, N);
 
+# Con la siguiente función voy a obtener la función transferencia de un 
+# determinado filtro cuyas características serán especificadas como parámetros
+# de la función
+# Los parámetros "ripple" y "aattenuation" deben ser pasados en dB
+# flt_aprox = "butter", "cheby1", "cheby2", "ellip"
+# flt_type = "lowpass", "highpass", "bandpass", "stopband"
+# La función devolverá la transferencia del filtro
+def get_filter_tf(flt_aprox = 'butter', flt_type = 'lowpass', 
+                     ripple = 0.5, attenuation = 40, ovs_rate = 5,
+                     ftran = 0.1):
+    
+    fstop = np.min([1/ovs_rate + ftran/2, 1/ovs_rate * 5/4])  #
+
+    fpass = np.max([fstop - ftran/2, fstop * 3/4]) # 
+
+    # Como usaremos filtrado bidireccional, alteramos las restricciones para
+    # ambas pasadas
+    ripple = ripple / 2 # dB
+    attenuation = attenuation / 2 # dB
+
+    if flt_aprox == 'butter':
+        orderz, wcutofz = sig.buttord( fpass, fstop, ripple, attenuation, analog=False)
+    elif flt_aprox == 'cheby1':
+        orderz, wcutofz = sig.cheb1ord( fpass, fstop, ripple, attenuation, analog=False)
+    elif flt_aprox == 'cheby2':
+        orderz, wcutofz = sig.cheb2ord( fpass, fstop, ripple, attenuation, analog=False)
+    elif flt_aprox == 'ellip':
+        orderz, wcutofz = sig.ellipord( fpass, fstop, ripple, attenuation, analog=False)
+
+    # Diseño del filtro digital
+
+    filter_sos = sig.iirfilter(orderz, wcutofz, rp=ripple, rs=attenuation, 
+                                btype = flt_type, 
+                                analog = False, 
+                                ftype = flt_aprox,
+                                output = 'sos');
+    
+    # Obtengo la función transferencia del filtro
+    tf_filter = sig.sos2tf(filter_sos);
+    
+    return tf_filter;
+
 # Defino los datos del ADC:
 
 Vr = 2;                         # Tensión de referencia del ADC
